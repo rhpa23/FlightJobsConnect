@@ -104,11 +104,12 @@
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
+    <IncludePath>C:\Users\rudolf\Documents\X-Plane SDK\curl-7.56.0\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>C:\Users\rudolf\Documents\Visual Studio 2017\Meus Projetos\curl-7.56.0\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\rudolf\Documents\X-Plane SDK\curl-7.56.0\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\rudolf\Documents\Visual Studio 2017\Meus Projetos\curl-7.56.0\build\Win64\VC14\DLL Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
