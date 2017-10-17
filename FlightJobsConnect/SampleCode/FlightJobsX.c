@@ -212,7 +212,7 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 	int y2 = y - h;
 	char Buffer[255];
 
-	sprintf(Buffer, "%s %s %s", "FlightJobsX", FlightJobsXVersionNumber, "- rhpa23");
+	sprintf(Buffer, "%s %s %s", "FlightJobs Connector", FlightJobsXVersionNumber, "- rhpa23");
 	FlightJobsXWidget = XPCreateWidget(x, y, x2, y2,
 		1,	// Visible
 		Buffer,	// desc
@@ -436,9 +436,17 @@ int login(int num)
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 		
+		char userNameBuf[40];
+		XPGetWidgetDescriptor(UserNameTextBox, userNameBuf, sizeof(userNameBuf));
+		sprintf(userNameBuf, "Email: %s", userNameBuf);
+
+		char passNameBuf[40];
+		XPGetWidgetDescriptor(PassWordTextBox, passNameBuf, sizeof(passNameBuf));
+		sprintf(passNameBuf, "Password: %s", passNameBuf);
+
 		struct curl_slist *headers = NULL;
-		headers = curl_slist_append(headers, "Email: rhpa23@gmail.com");
-		headers = curl_slist_append(headers, "Password: 1q2w3e!Q@W#E");
+		headers = curl_slist_append(headers, userNameBuf);
+		headers = curl_slist_append(headers, passNameBuf);
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
 		// Do request 
