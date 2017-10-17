@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{9ec4ad83-6b6f-4759-bfe9-c98dbeaa2773}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Library Files">
+      <UniqueIdentifier>{af647d6f-94d1-4eae-a660-b39eb115e7b7}</UniqueIdentifier>
+      <Extensions>lib</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{be5c5426-a01b-4c02-8819-c8918f754e48}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{b513b74d-5ca9-414a-b3d9-cfa94fa30c7c}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SampleCode\DrawingHook.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SampleCode\DrawingHookWin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\SDK\Libraries\Win\XPWidgets.lib">
+      <Filter>Library Files</Filter>
+    </Library>
+    <Library Include="..\..\..\SDK\Libraries\Win\XPLM.lib">
+      <Filter>Library Files</Filter>
+    </Library>
+  </ItemGroup>
+</Project>

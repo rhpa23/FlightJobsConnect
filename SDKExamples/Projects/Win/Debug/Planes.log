@@ -1,0 +1,8 @@
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(387,5): warning MSB8028: The intermediate directory (.\Debug\) contains files shared from another project (Camera.vcxproj, CommandSim.vcxproj, DrawAircraft.vcxproj, DrawingHook.vcxproj, FlightJobsX.vcxproj, HelloWorld.vcxproj, HotKey.vcxproj, KeySniffer.vcxproj, ManagePlugins.vcxproj, Navigation.vcxproj, ShareData.vcxproj, SimData.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  Planes.c
+  PlanesWin.cpp
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1198,5): warning MSB8012: TargetPath(C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\.\Debug\Planes.dll) does not match the Linker's OutputFile property value (C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\Debug\Plugins\Planes.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1199,5): warning MSB8012: TargetExt(.dll) does not match the Linker's OutputFile property value (.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+     Criando biblioteca .\Debug\Planes.lib e objeto .\Debug\Planes.exp
+  Planes.vcxproj -> C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\.\Debug\Planes.dll
+  Planes.vcxproj -> .\Debug\Planes.pdb (Full PDB)

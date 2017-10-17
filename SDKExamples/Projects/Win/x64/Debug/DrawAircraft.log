@@ -1,0 +1,21 @@
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppClean.targets(76,5): warning : O processo não pode acessar o arquivo 'c:\users\rudolf\documents\x-plane sdk\sdkexamples\projects\win\x64\debug\planes.pdb' porque ele está sendo usado por outro processo.
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(387,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (Camera.vcxproj, CommandSim.vcxproj, DrawingHook.vcxproj, HelloWorld.vcxproj, HotKey.vcxproj, KeySniffer.vcxproj, ManagePlugins.vcxproj, Navigation.vcxproj, Planes.vcxproj, ShareData.vcxproj, SimData.vcxproj, TimedProcessing.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  AircraftUtils.cpp
+  DrawAircraft.cpp
+  DrawAircraftWin.cpp
+  Gerando Código...
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1198,5): warning MSB8012: TargetPath(C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\x64\Debug\DrawAircraft.dll) does not match the Linker's OutputFile property value (C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\Debug\Plugins\DrawAircraft.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1199,5): warning MSB8012: TargetExt(.dll) does not match the Linker's OutputFile property value (.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+     Criando biblioteca .\Debug\DrawAircraft.lib e objeto .\Debug\DrawAircraft.exp
+AircraftUtils.obj : error LNK2019: símbolo externo indefinido __imp_XPLMFindDataRef referenciado na função "public: __cdecl Aircraft::Aircraft(int)" (??0Aircraft@@QEAA@H@Z)
+DrawAircraft.obj : error LNK2001: símbolos externos indefinidos __imp_XPLMFindDataRef
+AircraftUtils.obj : error LNK2019: símbolo externo indefinido __imp_XPLMGetDataf referenciado na função "public: void __cdecl Aircraft::GetAircraftData(void)" (?GetAircraftData@Aircraft@@QEAAXXZ)
+DrawAircraft.obj : error LNK2001: símbolos externos indefinidos __imp_XPLMGetDataf
+AircraftUtils.obj : error LNK2019: símbolo externo indefinido __imp_XPLMSetDataf referenciado na função "public: void __cdecl Aircraft::SetAircraftData(void)" (?SetAircraftData@Aircraft@@QEAAXXZ)
+AircraftUtils.obj : error LNK2019: símbolo externo indefinido __imp_XPLMGetDatavf referenciado na função "public: void __cdecl Aircraft::GetAircraftData(void)" (?GetAircraftData@Aircraft@@QEAAXXZ)
+AircraftUtils.obj : error LNK2019: símbolo externo indefinido __imp_XPLMSetDatavf referenciado na função "public: void __cdecl Aircraft::SetAircraftData(void)" (?SetAircraftData@Aircraft@@QEAAXXZ)
+DrawAircraft.obj : error LNK2019: símbolo externo indefinido __imp_XPLMRegisterDrawCallback referenciado na função XPluginStart
+DrawAircraft.obj : error LNK2019: símbolo externo indefinido __imp_XPLMCountAircraft referenciado na função XPluginStart
+..\..\..\SDK\Libraries\Win\XPLM.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
+..\..\..\SDK\Libraries\Win\XPWidgets.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
+Debug/Plugins/DrawAircraft.xpl : fatal error LNK1120: 7 externo não resolvidos
