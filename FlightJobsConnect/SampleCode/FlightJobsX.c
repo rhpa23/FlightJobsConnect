@@ -36,13 +36,17 @@
 // Widget prototypes
 void CreateWidgetWindow(int x1, int y1, int w, int h);
 void UpdateData();
-int login(int num);
+int Request(int step);
+
 
 XPWidgetID	FlightJobsXWidget = NULL, FlightJobsXWindow = NULL;
 XPWidgetID	RefreshXButton, LoginXButton, StartXButton = NULL;
-XPWidgetID	LocationText;
+XPWidgetID	LocationText, PayloadText;
 XPWidgetID	MessageCaption, UserNameCaption, UserNameTextBox, PassWordCaption, PassWordTextBox = NULL;
 char FlightJobsXVersionNumber[] = "v1.00";
+char currentICAO[10];
+char *currentUserId;
+float payloadF;
 
 // Menu Prototypes
 void FlightJobsXMenuHandler(void *, void *);
@@ -84,16 +88,16 @@ PLUGIN_API int XPluginStart(
 	/* First we must fill in the passed in buffers to describe our
 	* plugin to the plugin-system. */
 
-	strcpy(outName, "FlightJobsX");
+	strcpy(outName, "FlightJobs Connector");
 	strcpy(outSig, "xplanesdk.examples.helloworld");
 	strcpy(outDesc, "A plugin that start pending jobs in FlightJobs system.");
 
 	FlightJobsXMenuItem1 = 0;
 	FlightJobsXIsStarted = 0;
 	// Create the menus
-	FlightJobsXMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "FlightJobsX", NULL, 1);
-	FlightJobsXMenuId = XPLMCreateMenu("FlightJobsX", XPLMFindPluginsMenu(), FlightJobsXMenuItem, FlightJobsXMenuHandler, NULL);
-	FlightJobsXMenuItem2 = XPLMAppendMenuItem(FlightJobsXMenuId, "FlightJobsX", (void *)"FlightJobsX", 1);
+	FlightJobsXMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "FlightJobs", NULL, 1);
+	FlightJobsXMenuId = XPLMCreateMenu("FlightJobs", XPLMFindPluginsMenu(), FlightJobsXMenuItem, FlightJobsXMenuHandler, NULL);
+	FlightJobsXMenuItem2 = XPLMAppendMenuItem(FlightJobsXMenuId, "Open connector", (void *)"Open connector", 1);
 
 //	CreateWidgetWindow(100, 550, 650, 330);
 	/* We must return 1 to indicate successful initialization, otherwise we
@@ -173,12 +177,12 @@ float	MyFlightLoopCallback(
 
 void UpdateData()
 {
-	/* The actual callback.  First we read the sim's time and the data. */
-	float	elapsed = XPLMGetElapsedTime();
+	// Aircraft payload
+	payloadF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/weight/m_fixed"));
+	char payloadS[50];
+	sprintf(payloadS, "Aircraft payload: %.2f %s", payloadF, "Kg");
 
-	float	color[] = { 0.0, 0.0, 0.0 }; 	/* RGB Black */
-
-											/* First find the plane's position. */
+	/* First find the plane's position. */
 	float lat = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 	float lon = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 	char  airportInfo[256];
@@ -188,18 +192,16 @@ void UpdateData()
 	if (ref != XPLM_NAV_NOT_FOUND)
 	{
 		/* If we found one, get its information, and say it. */
-		char	id[10];
 		char	name[256];
-		XPLMGetNavAidInfo(ref, NULL, &lat, &lon, NULL, NULL, NULL, id, name, NULL);
+		XPLMGetNavAidInfo(ref, NULL, &lat, &lon, NULL, NULL, NULL, currentICAO, name, NULL);
 
-		sprintf(airportInfo, "Current airport: '%s', \"%s\"", id, name);
+		sprintf(airportInfo, "Current airport: '%s', \"%s\"", currentICAO, name);
 	}
 	else {
 		sprintf(airportInfo, "No airports were found!");
 	}
 
-	//XPLMDrawString(color, left + 5, top - 40, airportInfo, NULL, xplmFont_Basic);
-
+	XPSetWidgetDescriptor(PayloadText, payloadS);
 	XPSetWidgetDescriptor(LocationText, airportInfo);
 	XPLMDebugString(airportInfo);
 }
@@ -232,69 +234,31 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 	XPSetWidgetProperty(FlightJobsXWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
 
 	// Button region
-	LoginXButton = XPCreateWidget(x + 90, y - 110, x + 190, y - 130,
-		1, " Login ", 0, FlightJobsXWidget,
-		xpWidgetClass_Button);
-
+	LoginXButton = XPCreateWidget(x + 90, y - 110, x + 190, y - 130, 1, " Login ", 0, FlightJobsXWidget, xpWidgetClass_Button);
 	XPSetWidgetProperty(LoginXButton, xpProperty_ButtonType, xpPushButton);
-	//---
-	RefreshXButton = XPCreateWidget(x + 90, y - 290, x + 190, y - 310,
-		1, " Refresh ", 0, FlightJobsXWidget,
-		xpWidgetClass_Button);
 
+	RefreshXButton = XPCreateWidget(x + 90, y - 300, x + 190, y - 320, 1, " Refresh ", 0, FlightJobsXWidget, xpWidgetClass_Button);
 	XPSetWidgetProperty(RefreshXButton, xpProperty_ButtonType, xpPushButton);
-	//---
-	StartXButton = XPCreateWidget(x + 90, y - 330, x + 190, y - 350,
-		1, " Start ", 0, FlightJobsXWidget,
-		xpWidgetClass_Button);
 
+	StartXButton = XPCreateWidget(x + 90, y - 330, x + 190, y - 350, 1, " Start ", 0, FlightJobsXWidget, xpWidgetClass_Button);
 	XPSetWidgetProperty(StartXButton, xpProperty_ButtonType, xpPushButton);
 
-	
-
 	// TextBox region
-	UserNameCaption = XPCreateWidget(x + 20, y - 40, x + 160, y - 60,
-		1,	// Visible
-		"User name: ",// desc
-		0,		// root
-		FlightJobsXWidget,
-		xpWidgetClass_Caption);
-	//--
-	UserNameTextBox = XPCreateWidget(x + 100, y - 40, x + 220, y - 60,
-		1, "", 0, FlightJobsXWidget,
-		xpWidgetClass_TextField);
+	UserNameCaption = XPCreateWidget(x + 20, y - 40, x + 160, y - 60, 1, "User name: ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	UserNameTextBox = XPCreateWidget(x + 100, y - 40, x + 220, y - 60, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
 
-
-	PassWordCaption = XPCreateWidget(x + 20, y - 70, x + 160, y - 90,
-		1,	// Visible
-		"Password: ",// desc
-		0,		// root
-		FlightJobsXWidget,
-		xpWidgetClass_Caption);
-	//--
-	PassWordTextBox = XPCreateWidget(x + 100, y - 70, x + 220, y - 90,
-		1, "", 0, FlightJobsXWidget,
-		xpWidgetClass_TextField);
-
-	MessageCaption = XPCreateWidget(x + 15, y - 275, x + 190, y - 295,
-		1,	// Visible
-		" ",// desc
-		0,		// root
-		FlightJobsXWidget,
-		xpWidgetClass_Caption);
+	PassWordCaption = XPCreateWidget(x + 20, y - 70, x + 160, y - 90, 1, "Password: ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	PassWordTextBox = XPCreateWidget(x + 100, y - 70, x + 220, y - 90, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
 
 	XPSetWidgetProperty(UserNameTextBox, xpProperty_TextFieldType, xpTextEntryField);
-	//XPSetWidgetProperty(PassWordTextBox, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(PassWordTextBox, xpProperty_PasswordMode, 1);
 	XPSetWidgetProperty(PassWordTextBox, xpProperty_MaxCharacters, 20);
 	XPSetWidgetProperty(UserNameTextBox, xpProperty_MaxCharacters, 20);
 
-	LocationText = XPCreateWidget(x + 20, y - 160, x + 160, y - 180,
-		1,	// Visible
-		"Current airport:",// desc
-		0,		// root
-		FlightJobsXWidget,
-		xpWidgetClass_Caption);
+	// Caption Region 
+	LocationText = XPCreateWidget(x + 10, y - 160, x + 160, y - 180, 1,	" ",	0, FlightJobsXWidget, xpWidgetClass_Caption);
+	PayloadText = XPCreateWidget(x + 10, y - 180, x + 160, y - 200, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	MessageCaption = XPCreateWidget(x + 15, y - 275, x + 190, y - 295, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
 
 	XPAddWidgetCallback(FlightJobsXWidget, FlightJobsXHandler);
 	XPSetWidgetProperty(RefreshXButton, xpProperty_Enabled, 0);
@@ -327,7 +291,7 @@ int	FlightJobsXHandler(
 	{
 		if (inParam1 == (intptr_t)LoginXButton)
 		{
-			if (login(1) == 1)
+			if (Request(1) == 1)
 			{
 				UpdateData();
 
@@ -347,16 +311,19 @@ int	FlightJobsXHandler(
 		}
 		if (inParam1 == (intptr_t)StartXButton)
 		{
-			XPSetWidgetDescriptor(MessageCaption, " ");
-			if (FlightJobsXIsStarted == 0)
+			if (Request(2) == 1)
 			{
-				XPSetWidgetDescriptor(StartXButton, " Finish ");
-				FlightJobsXIsStarted = 1;
-			}
-			else
-			{
-				XPSetWidgetDescriptor(StartXButton, " Start ");
-				FlightJobsXIsStarted = 0;
+				XPSetWidgetDescriptor(MessageCaption, "Job approved and started.");
+				if (FlightJobsXIsStarted == 0)
+				{
+					XPSetWidgetDescriptor(StartXButton, " Finish ");
+					FlightJobsXIsStarted = 1;
+				}
+				else
+				{
+					XPSetWidgetDescriptor(StartXButton, " Start ");
+					FlightJobsXIsStarted = 0;
+				}
 			}
 			return 1;
 		}
@@ -369,7 +336,7 @@ int	FlightJobsXHandler(
 void FlightJobsXMenuHandler(void * mRef, void * iRef)
 {
 	// Menu selected for widget
-	if (!strcmp((char *)iRef, "FlightJobsX"))
+	if (!strcmp((char *)iRef, "Open connector"))
 	{
 		if (FlightJobsXMenuItem1 == 0)
 		{
@@ -422,7 +389,7 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
 	return size*nmemb;
 }
 
-int login(int num)
+int Request(int step) // 1 = Login   2 = Start Job
 {
 	CURL *curl;
 	CURLcode res;
@@ -431,22 +398,44 @@ int login(int num)
 	if (curl) {
 		struct string s;
 		init_string(&s);
-
-		curl_easy_setopt(curl, CURLOPT_URL, "localhost/api/WebApi/Login?id=1");
+		
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 		
-		char userNameBuf[40];
-		XPGetWidgetDescriptor(UserNameTextBox, userNameBuf, sizeof(userNameBuf));
-		sprintf(userNameBuf, "Email: %s", userNameBuf);
-
-		char passNameBuf[40];
-		XPGetWidgetDescriptor(PassWordTextBox, passNameBuf, sizeof(passNameBuf));
-		sprintf(passNameBuf, "Password: %s", passNameBuf);
-
 		struct curl_slist *headers = NULL;
-		headers = curl_slist_append(headers, userNameBuf);
-		headers = curl_slist_append(headers, passNameBuf);
+
+		if (step == 1)
+		{
+			char tempBuffer[50];
+			curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/AuthenticationApi/Login");
+			XPGetWidgetDescriptor(UserNameTextBox, tempBuffer, sizeof(tempBuffer));
+			char userNameBuf[50];
+			sprintf(userNameBuf, "Email: %s", tempBuffer);
+
+			char passNameBuf[40];
+			XPGetWidgetDescriptor(PassWordTextBox, tempBuffer, sizeof(tempBuffer));
+			sprintf(passNameBuf, "Password: %s", tempBuffer);
+			
+			headers = curl_slist_append(headers, userNameBuf);
+			headers = curl_slist_append(headers, passNameBuf);
+		}
+		else if (step == 2)
+		{
+			curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/JobApi/StartJob");
+			char icaoBuf[50];
+			sprintf(icaoBuf, "ICAO: %s", currentICAO);
+
+			char payloadBuf[40];
+			sprintf(payloadBuf, "Payload: %f", payloadF);
+
+			char userIdBuf[40];
+			sprintf(userIdBuf, "UserId: %f", currentUserId);
+
+			headers = curl_slist_append(headers, userIdBuf);
+			headers = curl_slist_append(headers, icaoBuf);
+			headers = curl_slist_append(headers, payloadBuf);
+		}
+		
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
 		// Do request 
@@ -469,6 +458,10 @@ int login(int num)
 			{
 				//fprintf(stderr, "Succeeded: ", s.ptr);
 				XPSetWidgetDescriptor(MessageCaption, s.ptr);
+				if (step == 1)
+				{
+					currentUserId = s.ptr;
+				}
 			}
 			else
 			{
