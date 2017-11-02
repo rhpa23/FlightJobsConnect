@@ -26,6 +26,7 @@
 #include <curl/curl.h>
 #include <stdlib.h>
 
+
 /*
 * Global Variables.  We will store our single window globally.  We also record
 * whether the mouse is down from our mouse handler.  The drawing handler looks
@@ -39,13 +40,21 @@ void UpdateData();
 int StartRequest();
 int FinishRequest();
 int LoginRequest();
+void ReadSavedData();
 
+FILE *	gOutputFile;
+char	outputPath[255];
+char	fileName[] = "/Resources/plugins/FlightJobs/LoginSavedData.ini";
 
 XPWidgetID	FlightJobsXWidget, FlightJobsXWindow, FlightJobsXWindow2 = NULL;
 XPWidgetID	RefreshXButton, LoginXButton, StartXButton = NULL;
 XPWidgetID	LocationText, PayloadText, AircraftNumberCaption, AircraftDescCaption, AircraftFuelCaption = NULL;
 XPWidgetID	MessageCaption, UserNameCaption, UserNameTextBox, PassWordCaption, PassWordTextBox = NULL;
 XPWidgetID	HiddenUserIdCaption = NULL;
+
+//char host[] = "localhost:5646";
+char host[] = "flightjobs.azurewebsites.net";
+
 char FlightJobsXVersionNumber[] = "v0.10";
 char currentICAO[10];
 char acfTailNumS[40];
@@ -110,6 +119,10 @@ PLUGIN_API int XPluginStart(
 PLUGIN_API void	XPluginStop(void)
 {
 	XPLMDestroyMenu(FlightJobsXMenuId);
+	
+	/* Close the file */
+	fclose(gOutputFile);
+
 	// Clean up
 }
 
@@ -269,6 +282,32 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 	XPSetWidgetProperty(RefreshXButton, xpProperty_Enabled, 0);
 	XPSetWidgetProperty(StartXButton, xpProperty_Enabled, 0);
 	XPSetWidgetProperty(LoginXButton, xpProperty_Enabled, 1);
+
+	ReadSavedData();
+}
+
+void ReadSavedData() {
+	XPLMGetSystemPath(outputPath);
+	strcat(outputPath, fileName);
+
+	gOutputFile = fopen(outputPath, "r");
+	if (gOutputFile) {
+		char line[512];
+		char *search = "|";
+		char *userNameBuff;
+		char *passWordBuff;
+		while (!feof(gOutputFile)) {
+			if (fgets(line, sizeof(line), gOutputFile)) {
+
+				userNameBuff = strtok(line, search);
+				passWordBuff = strtok(NULL, search);
+
+				XPSetWidgetDescriptor(UserNameTextBox, userNameBuff);
+				XPSetWidgetDescriptor(PassWordTextBox, passWordBuff);
+			}
+		}
+	}
+	fclose(gOutputFile);
 }
 
 int	FlightJobsXHandler(
@@ -424,22 +463,23 @@ int LoginRequest()
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 		
 		struct curl_slist *headers = NULL;
+		
+		char endPointBuf[256];
+		sprintf(endPointBuf, "%s/api/AuthenticationApi/Login", host);
 
-		char tempBuffer[50];
-		curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/AuthenticationApi/Login");
-		XPGetWidgetDescriptor(UserNameTextBox, tempBuffer, sizeof(tempBuffer));
-		char userNameBuf[50];
-		sprintf(userNameBuf, "Email: %s", tempBuffer);
+		char userNameBuffer[250];
+		curl_easy_setopt(curl, CURLOPT_URL, endPointBuf);
+		XPGetWidgetDescriptor(UserNameTextBox, userNameBuffer, sizeof(userNameBuffer));
+		char userNameBuf[250];
+		sprintf(userNameBuf, "Email: %s", userNameBuffer);
 
-		char passNameBuf[40];
-		XPGetWidgetDescriptor(PassWordTextBox, tempBuffer, sizeof(tempBuffer));
-		sprintf(passNameBuf, "Password: %s", tempBuffer);
+		char pwBuffer[250];
+		char passNameBuf[240];
+		XPGetWidgetDescriptor(PassWordTextBox, pwBuffer, sizeof(pwBuffer));
+		sprintf(passNameBuf, "Password: %s", pwBuffer);
 			
-		//headers = curl_slist_append(headers, userNameBuf);
-		//headers = curl_slist_append(headers, passNameBuf);
-//********************* Remove *************************
-		headers = curl_slist_append(headers, "Email: rhpa23@gmail.com");
-		headers = curl_slist_append(headers, "Password: 1q2w3e!Q@W#E");
+		headers = curl_slist_append(headers, userNameBuf);
+		headers = curl_slist_append(headers, passNameBuf);
 		
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
@@ -460,6 +500,17 @@ int LoginRequest()
 				//XPSetWidgetDescriptor(MessageCaption, s.ptr);
 				XPSetWidgetDescriptor(HiddenUserIdCaption, s.ptr);
 				result = 1;
+
+				/* Write the data to a file. */
+				XPLMGetSystemPath(outputPath);
+				strcat(outputPath, fileName);
+
+				gOutputFile = fopen(outputPath, "w");
+
+				/* Write a file. */
+				fprintf(gOutputFile, "%s|%s", userNameBuffer, pwBuffer);
+
+				fflush(gOutputFile);
 			}
 			else
 			{
@@ -492,7 +543,10 @@ int StartRequest()
 
 		struct curl_slist *headers = NULL;
 
-		curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/JobApi/StartJob");
+		char endPointBuf[256];
+		sprintf(endPointBuf, "%s/api/JobApi/StartJob", host);
+
+		curl_easy_setopt(curl, CURLOPT_URL, endPointBuf);
 		char icaoBuf[50];
 		sprintf(icaoBuf, "ICAO: %s", currentICAO);
 
@@ -561,7 +615,10 @@ int FinishRequest()
 
 		struct curl_slist *headers = NULL;
 
-		curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/JobApi/FinishJob");
+		char endPointBuf[256];
+		sprintf(endPointBuf, "%s/api/JobApi/FinishJob", host);
+
+		curl_easy_setopt(curl, CURLOPT_URL, endPointBuf);
 		char icaoBuf[50];
 		sprintf(icaoBuf, "ICAO: %s", currentICAO);
 
