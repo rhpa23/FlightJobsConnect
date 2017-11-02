@@ -30,7 +30,7 @@
     <SccProjectName />
     <SccLocalPath />
     <ProjectGuid>{69413864-932F-43D0-847D-E598B8D9A287}</ProjectGuid>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Template|Win32'" Label="Configuration">
@@ -109,8 +109,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>C:\Users\rudolf\Documents\X-Plane SDK\curl-7.56.0\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\rudolf\Documents\Visual Studio 2017\Meus Projetos\curl-7.56.0\build\Win64\VC14\DLL Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\DotNetProjects\FlightJobsConnect\curl-7.56.0\include;C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.16299.0\ucrt;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\DotNetProjects\FlightJobsConnect\curl-7.56.0\builds\libcurl-vc17-x64-release-dll-ipv6-sspi-winssl\bin;C:\Users\rudolf\Documents\Visual Studio 2017\Meus Projetos\curl-7.56.0\build\Win64\VC14\DLL Release;C:\Program Files %28x86%29\Windows Kits\10\Lib\10.0.16299.0\ucrt\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

@@ -1,0 +1,1 @@
+copy win.xpl "C:\Games\X-Plane 11\Resources\plugins\FlightJobs\64"
