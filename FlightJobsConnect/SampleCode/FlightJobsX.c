@@ -37,16 +37,19 @@
 void CreateWidgetWindow(int x1, int y1, int w, int h);
 void UpdateData();
 int StartRequest();
+int FinishRequest();
 int LoginRequest();
 
 
-XPWidgetID	FlightJobsXWidget = NULL, FlightJobsXWindow = NULL;
+XPWidgetID	FlightJobsXWidget, FlightJobsXWindow, FlightJobsXWindow2 = NULL;
 XPWidgetID	RefreshXButton, LoginXButton, StartXButton = NULL;
-XPWidgetID	LocationText, PayloadText;
+XPWidgetID	LocationText, PayloadText, AircraftNumberCaption, AircraftDescCaption, AircraftFuelCaption = NULL;
 XPWidgetID	MessageCaption, UserNameCaption, UserNameTextBox, PassWordCaption, PassWordTextBox = NULL;
 XPWidgetID	HiddenUserIdCaption = NULL;
-char FlightJobsXVersionNumber[] = "v1.00";
+char FlightJobsXVersionNumber[] = "v0.10";
 char currentICAO[10];
+char acfTailNumS[40];
+char acfDescS[256];
 float payloadF;
 float fuelWeightF;
 
@@ -67,13 +70,6 @@ int FlightJobsXHandler(
 	intptr_t				inParam1,
 	intptr_t				inParam2);
 
-float	MyFlightLoopCallback(
-	float                inElapsedSinceLastCall,
-	float                inElapsedTimeSinceLastFlightLoop,
-	int                  inCounter,
-	void *               inRefcon);
-
-
 
 /*
 * XPluginStart
@@ -91,8 +87,8 @@ PLUGIN_API int XPluginStart(
 	* plugin to the plugin-system. */
 
 	strcpy(outName, "FlightJobs Connector");
-	strcpy(outSig, "xplanesdk.examples.helloworld");
-	strcpy(outDesc, "A plugin that start pending jobs in FlightJobs system.");
+	strcpy(outSig, "xplanesdk.examples.flightfobs");
+	strcpy(outDesc, "Connect to FlightJobs system.");
 
 	FlightJobsXMenuItem1 = 0;
 	FlightJobsXIsStarted = 0;
@@ -101,17 +97,6 @@ PLUGIN_API int XPluginStart(
 	FlightJobsXMenuId = XPLMCreateMenu("FlightJobs", XPLMFindPluginsMenu(), FlightJobsXMenuItem, FlightJobsXMenuHandler, NULL);
 	FlightJobsXMenuItem2 = XPLMAppendMenuItem(FlightJobsXMenuId, "Open connector", (void *)"Open connector", 1);
 
-//	CreateWidgetWindow(100, 550, 650, 330);
-	/* We must return 1 to indicate successful initialization, otherwise we
-	* will not be called back again. */
-
-	/* Register our callback for once a second.  Positive intervals
-	* are in seconds, negative are the negative of sim frames.  Zero
-	* registers but does not schedule a callback for time. */
-	XPLMRegisterFlightLoopCallback(
-		MyFlightLoopCallback,	/* Callback */
-		-1.0,					/* Interval */
-		NULL);
 
 	return 1;
 }
@@ -124,7 +109,6 @@ PLUGIN_API int XPluginStart(
 */
 PLUGIN_API void	XPluginStop(void)
 {
-	XPLMUnregisterFlightLoopCallback(MyFlightLoopCallback, NULL);
 	XPLMDestroyMenu(FlightJobsXMenuId);
 	// Clean up
 }
@@ -164,26 +148,23 @@ PLUGIN_API void XPluginReceiveMessage(
 {
 }
 
-
-float	MyFlightLoopCallback(
-	float                inElapsedSinceLastCall,
-	float                inElapsedTimeSinceLastFlightLoop,
-	int                  inCounter,
-	void *               inRefcon)
-{
-	
-	UpdateData();
-	return 1.0;
-
-}
-
 void UpdateData()
 {
 	// Aircraft payload
 	payloadF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/weight/m_fixed"));
-	char payloadS[50];
-	sprintf(payloadS, "Aircraft payload: %.2f %s", payloadF, "Kg");
+	char payloadS[90];
+	sprintf(payloadS, "Payload: %.2f %s", payloadF, "Kg");
 
+	// Aircraft Number
+	XPLMGetDatab(XPLMFindDataRef("sim/aircraft/view/acf_tailnum"), acfTailNumS, 0, 40);
+	char aircraftNumberS[90];
+	sprintf(aircraftNumberS, "Tail number: %s", acfTailNumS);
+
+	// Description of the plane
+	XPLMGetDatab(XPLMFindDataRef("sim/aircraft/view/acf_descrip"), acfDescS, 0, 256);
+	char aircraftDescS[256];
+	sprintf(aircraftDescS, "Description: %s", acfDescS);
+	
 	// Aircraft FuelWeight
 	fuelWeightF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/weight/m_fuel_total"));
 	char fuelWeightS[50];
@@ -209,16 +190,20 @@ void UpdateData()
 	}
 
 	XPSetWidgetDescriptor(PayloadText, payloadS);
+	XPSetWidgetDescriptor(AircraftNumberCaption, aircraftNumberS);
+	XPSetWidgetDescriptor(AircraftDescCaption, aircraftDescS);
+	XPSetWidgetDescriptor(AircraftFuelCaption, fuelWeightS);
 	XPSetWidgetDescriptor(LocationText, airportInfo);
 	//XPLMDebugString(airportInfo);
 }
 
+//CreateWidgetWindow(60, 650, 320, 370);
 void CreateWidgetWindow(int x, int y, int w, int h)
 {
 	int Item;
 
 	int x2 = x + w;
-	int y2 = y - h;
+	int y2 = y - h;//280
 	char Buffer[255];
 
 	sprintf(Buffer, "%s %s %s", "FlightJobs Connector", FlightJobsXVersionNumber, "- rhpa23");
@@ -238,7 +223,15 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 		FlightJobsXWidget,
 		xpWidgetClass_SubWindow);
 
+	FlightJobsXWindow2 = XPCreateWidget(x + 5, y - 145, x2 - 5, y2 + 5,
+		1,	// Visible
+		"",	// desc
+		0,		// root
+		FlightJobsXWidget,
+		xpWidgetClass_SubWindow);
+
 	XPSetWidgetProperty(FlightJobsXWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
+	XPSetWidgetProperty(FlightJobsXWindow2, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
 
 	// Button region
 	LoginXButton = XPCreateWidget(x + 110, y - 110, x + 210, y - 130, 1, " Login ", 0, FlightJobsXWidget, xpWidgetClass_Button);
@@ -252,10 +245,10 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 
 	// TextBox region
 	UserNameCaption = XPCreateWidget(x + 20, y - 40, x + 160, y - 60, 1, "User name: ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
-	UserNameTextBox = XPCreateWidget(x + 100, y - 40, x + 250, y - 60, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
+	UserNameTextBox = XPCreateWidget(x + 100, y - 40, x + 280, y - 60, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
 
 	PassWordCaption = XPCreateWidget(x + 20, y - 70, x + 160, y - 90, 1, "Password: ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
-	PassWordTextBox = XPCreateWidget(x + 100, y - 70, x + 250, y - 90, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
+	PassWordTextBox = XPCreateWidget(x + 100, y - 70, x + 280, y - 90, 1, "", 0, FlightJobsXWidget,	xpWidgetClass_TextField);
 
 	XPSetWidgetProperty(UserNameTextBox, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(PassWordTextBox, xpProperty_PasswordMode, 1);
@@ -265,6 +258,10 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 	// Caption Region 
 	LocationText = XPCreateWidget(x + 10, y - 160, x + 220, y - 180, 1,	" ",	0, FlightJobsXWidget, xpWidgetClass_Caption);
 	PayloadText = XPCreateWidget(x + 10, y - 180, x + 220, y - 200, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	AircraftNumberCaption = XPCreateWidget(x + 10, y - 200, x + 220, y - 220, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	AircraftDescCaption = XPCreateWidget(x + 10, y - 220, x + 220, y - 240, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+	AircraftFuelCaption = XPCreateWidget(x + 10, y - 240, x + 220, y - 260, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
+
 	MessageCaption = XPCreateWidget(x + 15, y - 275, x + 220, y - 295, 1, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
 	HiddenUserIdCaption = XPCreateWidget(x, y, x, y, 0, " ", 0, FlightJobsXWidget, xpWidgetClass_Caption);
 
@@ -319,6 +316,8 @@ int	FlightJobsXHandler(
 		}
 		if (inParam1 == (intptr_t)StartXButton)
 		{
+			UpdateData();
+
 			if (FlightJobsXIsStarted == 0)
 			{
 				if (StartRequest() == 1)
@@ -335,8 +334,15 @@ int	FlightJobsXHandler(
 			}
 			else
 			{
-				XPSetWidgetDescriptor(StartXButton, " Start ");
-				FlightJobsXIsStarted = 0;
+				if (FinishRequest() == 1)
+				{
+					XPSetWidgetDescriptor(StartXButton, " Start ");
+					FlightJobsXIsStarted = 0;
+				}
+				else
+				{
+					XPLMDebugString("\n FlightJobs finish erro.");
+				}
 			}
 
 			return 1;
@@ -505,6 +511,83 @@ int StartRequest()
 		headers = curl_slist_append(headers, userIdBuf);
 		headers = curl_slist_append(headers, icaoBuf);
 		headers = curl_slist_append(headers, payloadBuf);
+
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+		// Do request 
+		res = curl_easy_perform(curl);
+		//XPLMDebugString(s.ptr);
+
+		/* Check for errors */
+		if (res != CURLE_OK)
+		{
+			XPSetWidgetDescriptor(MessageCaption, "Server connection failed");
+		}
+		else
+		{
+			long http_code = 0;
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+			if (http_code == 200)
+			{
+				XPSetWidgetDescriptor(MessageCaption, sWriteData.ptr);
+				result = 1;
+			}
+			else
+			{
+				XPSetWidgetDescriptor(MessageCaption, sWriteData.ptr);
+			}
+		}
+
+		free(sWriteData.ptr);
+		/* always cleanup */
+		curl_easy_cleanup(curl);
+	}
+	return result;
+}
+
+int FinishRequest()
+{
+	CURL *curl;
+	CURLcode res;
+	int result = 0;
+
+	curl = curl_easy_init();
+	if (curl) {
+		struct string sWriteData;
+		init_string(&sWriteData);
+
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &sWriteData);
+
+		struct curl_slist *headers = NULL;
+
+		curl_easy_setopt(curl, CURLOPT_URL, "localhost:5646/api/JobApi/FinishJob");
+		char icaoBuf[50];
+		sprintf(icaoBuf, "ICAO: %s", currentICAO);
+
+		char payloadBuf[40];
+		sprintf(payloadBuf, "Payload: %f", payloadF);
+
+		char idTempBuffer[150];
+		XPGetWidgetDescriptor(HiddenUserIdCaption, idTempBuffer, sizeof(idTempBuffer));
+		char userIdBuf[140];
+		sprintf(userIdBuf, "UserId: %s", idTempBuffer);
+
+		char tailNumBuf[60];
+		sprintf(tailNumBuf, "TailNumber: %s", acfTailNumS);
+
+		char acfDescBuf[256];
+		sprintf(acfDescBuf, "PlaneDescription: %s", acfDescS);
+
+		char fuelWeightBuf[50];
+		sprintf(fuelWeightBuf, "FuelWeight: %f", fuelWeightF);
+
+		headers = curl_slist_append(headers, fuelWeightBuf);
+		headers = curl_slist_append(headers, userIdBuf);
+		headers = curl_slist_append(headers, icaoBuf);
+		headers = curl_slist_append(headers, payloadBuf);
+		headers = curl_slist_append(headers, tailNumBuf);
+		headers = curl_slist_append(headers, acfDescBuf);
 
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
