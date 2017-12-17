@@ -16,9 +16,12 @@
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
 #include "XPLMNavigation.h"
+#include "XPLMProcessing.h"
 #include "XPLMDataAccess.h"
+#include "XPLMUtilities.h"
 #include "XPUIGraphics.h"
 #include "XPLMMenus.h"
+
 
 #include "XPWidgets.h"
 #include "XPStandardWidgets.h"
@@ -52,11 +55,15 @@ XPWidgetID	LocationText, PayloadText, AircraftNumberCaption, AircraftDescCaption
 XPWidgetID	MessageCaption, UserNameCaption, UserNameTextBox, PassWordCaption, PassWordTextBox = NULL;
 XPWidgetID	HiddenUserIdCaption = NULL;
 
+XPLMDataRef		ParkingBrake;
+
 //char host[] = "localhost:5646";
-char host[] = "flightjobs.azurewebsites.net";
+char host[] = "flightjobs.gear.host";
 
 char FlightJobsXVersionNumber[] = "v0.10";
-char currentICAO[10];
+char currentICAO[5];
+char currentName[256];
+char arrivalICAO[5];
 char acfTailNumS[40];
 char acfDescS[256];
 float payloadF;
@@ -68,6 +75,7 @@ void FlightJobsXMenuHandler2(void *, void *);
 
 int FlightJobsXMenuItem1;
 int FlightJobsXIsStarted;
+int RememberShown;
 int	FlightJobsXMenuItem = 0, FlightJobsXMenuItem2 = 0;
 XPLMMenuID	FlightJobsXMenuId = NULL, FlightJobsXMenuId2 = NULL;
 
@@ -79,6 +87,11 @@ int FlightJobsXHandler(
 	intptr_t				inParam1,
 	intptr_t				inParam2);
 
+float	MyFlightLoopCallback(
+	float                inElapsedSinceLastCall,
+	float                inElapsedTimeSinceLastFlightLoop,
+	int                  inCounter,
+	void *               inRefcon);
 
 /*
 * XPluginStart
@@ -101,11 +114,20 @@ PLUGIN_API int XPluginStart(
 
 	FlightJobsXMenuItem1 = 0;
 	FlightJobsXIsStarted = 0;
+	RememberShown = 0;
 	// Create the menus
 	FlightJobsXMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "FlightJobs", NULL, 1);
 	FlightJobsXMenuId = XPLMCreateMenu("FlightJobs", XPLMFindPluginsMenu(), FlightJobsXMenuItem, FlightJobsXMenuHandler, NULL);
 	FlightJobsXMenuItem2 = XPLMAppendMenuItem(FlightJobsXMenuId, "Open connector", (void *)"Open connector", 1);
 
+	ParkingBrake = XPLMFindDataRef("sim/flightmodel/controls/parkbrake");
+
+	XPLMRegisterFlightLoopCallback(
+		MyFlightLoopCallback,	/* Callback */
+		5.0,					/* Interval */
+		NULL);					/* refcon not used. */
+
+	XPLMDebugString("FlightJobs info - Started \n");
 
 	return 1;
 }
@@ -119,6 +141,9 @@ PLUGIN_API int XPluginStart(
 PLUGIN_API void	XPluginStop(void)
 {
 	XPLMDestroyMenu(FlightJobsXMenuId);
+
+	/* Unregister the callback */
+	XPLMUnregisterFlightLoopCallback(MyFlightLoopCallback, NULL);
 	
 	/* Close the file */
 	fclose(gOutputFile);
@@ -161,6 +186,41 @@ PLUGIN_API void XPluginReceiveMessage(
 {
 }
 
+
+float	MyFlightLoopCallback(
+	float                inElapsedSinceLastCall,
+	float                inElapsedTimeSinceLastFlightLoop,
+	int                  inCounter,
+	void *               inRefcon)
+{
+	/* The actual callback.  First we read the sim's time and the data. */
+	//float	elapsed = XPLMGetElapsedTime();
+	float	pBrake = XPLMGetDataf(ParkingBrake);
+	
+	if (FlightJobsXIsStarted == 1 && pBrake == 1.0)
+	{
+
+		SetCurrentICAO();
+
+		if (RememberShown == 0 && strcmp(currentICAO, arrivalICAO) == 0)
+		{
+			if (FlightJobsXMenuItem1 == 0)
+			{
+				CreateWidgetWindow(60, 650, 320, 370);
+				FlightJobsXMenuItem1 = 1;
+			}
+			else
+			{
+				XPShowWidget(FlightJobsXWidget);
+			}
+			RememberShown = 1;
+		}
+	}
+
+	/* Return 1.0 to indicate that we want to be called again in 5 second. */
+	return 1.0;
+}
+
 void UpdateData()
 {
 	// Aircraft payload
@@ -176,38 +236,53 @@ void UpdateData()
 	// Description of the plane
 	XPLMGetDatab(XPLMFindDataRef("sim/aircraft/view/acf_descrip"), acfDescS, 0, 256);
 	char aircraftDescS[256];
-	sprintf(aircraftDescS, "Description: %s", acfDescS);
+	sprintf(aircraftDescS, "Aircraft: %s", acfDescS);
+
+	char subAircraftDescS[45];
+	memcpy(subAircraftDescS, &aircraftDescS[0], 44);
+	subAircraftDescS[44] = '\0';
 	
 	// Aircraft FuelWeight
 	fuelWeightF = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/weight/m_fuel_total"));
 	char fuelWeightS[50];
 	sprintf(fuelWeightS, "Fuel weight: %.2f %s", fuelWeightF, "Kg");
 
+	char  airportInfo[256];
+
+	if (SetCurrentICAO() == 1)
+	{
+		sprintf(airportInfo, "Current airport: '%s', \"%s\"", currentICAO, currentName);
+	}
+	else
+	{
+		sprintf(airportInfo, "No airports were found!");
+	}
+
+	XPSetWidgetDescriptor(PayloadText, payloadS);
+	XPSetWidgetDescriptor(AircraftNumberCaption, aircraftNumberS);
+	XPSetWidgetDescriptor(AircraftDescCaption, subAircraftDescS);
+	XPSetWidgetDescriptor(AircraftFuelCaption, fuelWeightS);
+	XPSetWidgetDescriptor(LocationText, airportInfo);
+	//XPLMDebugString(airportInfo);
+}
+
+int SetCurrentICAO()
+{
 	/* First find the plane's position. */
 	float lat = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 	float lon = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
-	char  airportInfo[256];
 
 	/* Find the nearest airport to us. */
 	XPLMNavRef	ref = XPLMFindNavAid(NULL, NULL, &lat, &lon, NULL, xplm_Nav_Airport);
 	if (ref != XPLM_NAV_NOT_FOUND)
 	{
 		/* If we found one, get its information, and say it. */
-		char	name[256];
-		XPLMGetNavAidInfo(ref, NULL, &lat, &lon, NULL, NULL, NULL, currentICAO, name, NULL);
+		XPLMGetNavAidInfo(ref, NULL, &lat, &lon, NULL, NULL, NULL, currentICAO, currentName, NULL);
 
-		sprintf(airportInfo, "Current airport: '%s', \"%s\"", currentICAO, name);
-	}
-	else {
-		sprintf(airportInfo, "No airports were found!");
+		return 1;
 	}
 
-	XPSetWidgetDescriptor(PayloadText, payloadS);
-	XPSetWidgetDescriptor(AircraftNumberCaption, aircraftNumberS);
-	XPSetWidgetDescriptor(AircraftDescCaption, aircraftDescS);
-	XPSetWidgetDescriptor(AircraftFuelCaption, fuelWeightS);
-	XPSetWidgetDescriptor(LocationText, airportInfo);
-	//XPLMDebugString(airportInfo);
+	return 0;
 }
 
 //CreateWidgetWindow(60, 650, 320, 370);
@@ -583,7 +658,20 @@ int StartRequest()
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 			if (http_code == 200)
 			{
+				
+
 				XPSetWidgetDescriptor(MessageCaption, sWriteData.ptr);
+
+				char line[256];
+				strcpy(line, sWriteData.ptr);
+
+				memcpy(arrivalICAO, &line[8], 4);
+				arrivalICAO[4] = '\0';
+
+				char arrivalICAOInfo[256];
+				sprintf(arrivalICAOInfo, "FlightJobs - arrival ICAO is: %s \n", arrivalICAO);
+				XPLMDebugString(arrivalICAOInfo);
+
 				result = 1;
 			}
 			else
@@ -601,6 +689,20 @@ int StartRequest()
 
 int FinishRequest()
 {
+
+	//if (strcmp(currentICAO, arrivalICAO) == 0)
+	//{
+	//	char testInfo[256];
+	//	sprintf(testInfo, "FlightJobs - SAME: current = %s  arrival = %s \n", currentICAO, arrivalICAO);
+	//	XPLMDebugString(testInfo);
+	//}
+	//else
+	//{
+	//	char testInfo[256];
+	//	sprintf(testInfo, "FlightJobs - current = %s  arrival = %s \n", currentICAO, arrivalICAO);
+	//	XPLMDebugString(testInfo);
+	//}
+
 	CURL *curl;
 	CURLcode res;
 	int result = 0;
