@@ -29,7 +29,7 @@
 #include <curl/curl.h>
 #include <stdlib.h>
 
-
+ 
 /*
 * Global Variables.  We will store our single window globally.  We also record
 * whether the mouse is down from our mouse handler.  The drawing handler looks
@@ -58,7 +58,8 @@ XPWidgetID	HiddenUserIdCaption = NULL;
 XPLMDataRef		ParkingBrake;
 
 //char host[] = "localhost:5646";
-char host[] = "flightjobs.gear.host";
+//char host[] = "flightjobs.gear.host";
+char host[] = "rhpa23-001-site1.ftempurl.com";
 
 char FlightJobsXVersionNumber[] = "v0.10";
 char currentICAO[5];
@@ -381,8 +382,8 @@ void ReadSavedData() {
 				XPSetWidgetDescriptor(PassWordTextBox, passWordBuff);
 			}
 		}
+		fclose(gOutputFile);
 	}
-	fclose(gOutputFile);
 }
 
 int	FlightJobsXHandler(
