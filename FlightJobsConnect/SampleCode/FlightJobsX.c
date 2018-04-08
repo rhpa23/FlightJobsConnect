@@ -61,7 +61,7 @@ XPLMDataRef		ParkingBrake;
 //char host[] = "flightjobs.gear.host";
 char host[] = "rhpa23-001-site1.ftempurl.com";
 
-char FlightJobsXVersionNumber[] = "v0.10";
+char FlightJobsXVersionNumber[] = "v0.20";
 char currentICAO[5];
 char currentName[256];
 char arrivalICAO[5];
@@ -146,8 +146,6 @@ PLUGIN_API void	XPluginStop(void)
 	/* Unregister the callback */
 	XPLMUnregisterFlightLoopCallback(MyFlightLoopCallback, NULL);
 	
-	/* Close the file */
-	fclose(gOutputFile);
 
 	// Clean up
 }
@@ -341,8 +339,8 @@ void CreateWidgetWindow(int x, int y, int w, int h)
 
 	XPSetWidgetProperty(UserNameTextBox, xpProperty_TextFieldType, xpTextEntryField);
 	XPSetWidgetProperty(PassWordTextBox, xpProperty_PasswordMode, 1);
-	XPSetWidgetProperty(PassWordTextBox, xpProperty_MaxCharacters, 20);
-	XPSetWidgetProperty(UserNameTextBox, xpProperty_MaxCharacters, 20);
+	XPSetWidgetProperty(PassWordTextBox, xpProperty_MaxCharacters, 30);
+	XPSetWidgetProperty(UserNameTextBox, xpProperty_MaxCharacters, 50);
 
 	// Caption Region 
 	LocationText = XPCreateWidget(x + 10, y - 160, x + 220, y - 180, 1,	" ",	0, FlightJobsXWidget, xpWidgetClass_Caption);
