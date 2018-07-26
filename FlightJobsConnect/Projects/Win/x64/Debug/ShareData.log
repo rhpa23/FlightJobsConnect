@@ -1,17 +1,1 @@
-﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(387,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (Camera.vcxproj, CommandSim.vcxproj, DrawingHook.vcxproj, HelloWorld.vcxproj, HotKey.vcxproj, KeySniffer.vcxproj, ManagePlugins.vcxproj, Navigation.vcxproj).  This can lead to incorrect clean and rebuild behavior.
-  ShareData.c
-..\..\SampleCode\ShareData.c(81): warning C4477: 'sprintf': a cadeia de formato '%x' requer um argumento do tipo 'unsigned int', mas um argumento variadic 1 tem o tipo 'XPLMDataRef'
-..\..\SampleCode\ShareData.c(81): warning C4313: 'sprintf': '%x' na cadeia de formato está em conflito com o argumento 1 do tipo 'XPLMDataRef'
-  ShareDataWin.cpp
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1198,5): warning MSB8012: TargetPath(C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\x64\Debug\ShareData.dll) does not match the Linker's OutputFile property value (C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\Debug\Plugins\ShareData.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1199,5): warning MSB8012: TargetExt(.dll) does not match the Linker's OutputFile property value (.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-     Criando biblioteca .\Debug\ShareData.lib e objeto .\Debug\ShareData.exp
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMFindDataRef referenciado na função XPluginStart
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMRegisterDataAccessor referenciado na função XPluginStart
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMUnregisterDataAccessor referenciado na função XPluginStop
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMShareData referenciado na função XPluginStart
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMUnshareData referenciado na função XPluginStop
-ShareData.obj : error LNK2019: símbolo externo indefinido __imp_XPLMDebugString referenciado na função XPluginStart
-..\..\..\SDK\Libraries\Win\XPLM.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
-..\..\..\SDK\Libraries\Win\XPWidgets.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
-Debug/Plugins/ShareData.xpl : fatal error LNK1120: 6 externo não resolvidos
+﻿D:\Visual Studio2017\Community\Common7\IDE\VC\VCTargets\Platforms\x64\PlatformToolsets\v141\Toolset.targets(36,5): error MSB8036: The Windows SDK version 8.1 was not found. Install the required version of Windows SDK or change the SDK version in the project property pages or by right-clicking the solution and selecting "Retarget solution".

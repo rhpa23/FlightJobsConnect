@@ -39,29 +39,42 @@
 
 // Widget prototypes
 void CreateWidgetWindow(int x1, int y1, int w, int h);
+void CreateWidgetWindowSettings(int x1, int y1, int w, int h);
 void UpdateData();
+void OpenConnectorWindow();
 int StartRequest();
 int FinishRequest();
 int LoginRequest();
 void ReadSavedData();
+void ReadSavedDataSettings(int bindForms);
+static int GetDataRefState(XPLMDataRef DataRefID);
+int iStateStart, iStateFinish, iStateStartParkingBrake, iStateStartEngineOn = 1;
 
 FILE *	gOutputFile;
 char	outputPath[255];
 char	fileName[] = "/Resources/plugins/FlightJobs/LoginSavedData.ini";
 
+FILE *	gOutputFileSettings;
+char	outputPathSettings[255];
+char	fileNameSettings[] = "/Resources/plugins/FlightJobs/Settings.ini";
+
+XPWidgetID	FlightJobsSettingsXWidget, FlightJobsSettingsXWindow = NULL;
 XPWidgetID	FlightJobsXWidget, FlightJobsXWindow, FlightJobsXWindow2 = NULL;
 XPWidgetID	RefreshXButton, LoginXButton, StartXButton = NULL;
+XPWidgetID	SaveSettingsXButton, PopupWhenStartXCheckbox, PopupWhenFinishXCheckbox, PopupWhenStartParkingBrakeXRadio, PopupWhenEngineOnXRadio = NULL;
 XPWidgetID	LocationText, PayloadText, AircraftNumberCaption, AircraftDescCaption, AircraftFuelCaption = NULL;
 XPWidgetID	MessageCaption, UserNameCaption, UserNameTextBox, PassWordCaption, PassWordTextBox = NULL;
 XPWidgetID	HiddenUserIdCaption = NULL;
 
 XPLMDataRef		ParkingBrake;
+XPLMDataRef		EngineRunning;
+
 
 //char host[] = "localhost:5646";
 //char host[] = "flightjobs.gear.host";
 char host[] = "rhpa23-001-site1.ftempurl.com";
 
-char FlightJobsXVersionNumber[] = "v0.20";
+char FlightJobsXVersionNumber[] = "v0.30";
 char currentICAO[5];
 char currentName[256];
 char arrivalICAO[5];
@@ -72,17 +85,21 @@ float fuelWeightF;
 
 // Menu Prototypes
 void FlightJobsXMenuHandler(void *, void *);
-void FlightJobsXMenuHandler2(void *, void *);
 
-int FlightJobsXMenuItem1;
 int FlightJobsXIsStarted;
-int RememberShown;
-int	FlightJobsXMenuItem = 0, FlightJobsXMenuItem2 = 0;
+int RememberShownStart, RememberShownFinish;
+int	FlightJobsXMenuItem, FlightJobsXMenuItemOpenFlag, FlightJobsXMenuItemSettigsFlag, FlightJobsXMenuItemOpen, FlightJobsXMenuItemSettigs = 0;
 XPLMMenuID	FlightJobsXMenuId = NULL, FlightJobsXMenuId2 = NULL;
 
 #define FlightJobsX_MAX_ITEMS 5
 
 int FlightJobsXHandler(
+	XPWidgetMessage			inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2);
+
+int FlightJobsSettingsXHandler(
 	XPWidgetMessage			inMessage,
 	XPWidgetID				inWidget,
 	intptr_t				inParam1,
@@ -113,15 +130,19 @@ PLUGIN_API int XPluginStart(
 	strcpy(outSig, "xplanesdk.examples.flightfobs");
 	strcpy(outDesc, "Connect to FlightJobs system.");
 
-	FlightJobsXMenuItem1 = 0;
+	FlightJobsXMenuItemOpenFlag = 0;
 	FlightJobsXIsStarted = 0;
-	RememberShown = 0;
+	RememberShownStart, RememberShownFinish = 0;
 	// Create the menus
 	FlightJobsXMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "FlightJobs", NULL, 1);
 	FlightJobsXMenuId = XPLMCreateMenu("FlightJobs", XPLMFindPluginsMenu(), FlightJobsXMenuItem, FlightJobsXMenuHandler, NULL);
-	FlightJobsXMenuItem2 = XPLMAppendMenuItem(FlightJobsXMenuId, "Open connector", (void *)"Open connector", 1);
+	FlightJobsXMenuItemOpen = XPLMAppendMenuItem(FlightJobsXMenuId, "Open connector", (void *)"Open connector", 1);
+	FlightJobsXMenuItemSettigs = XPLMAppendMenuItem(FlightJobsXMenuId, "Settings", (void *)"Settings", 1);
 
 	ParkingBrake = XPLMFindDataRef("sim/flightmodel/controls/parkbrake");
+	EngineRunning = XPLMFindDataRef("sim/flightmodel/engine/ENGN_running");
+
+	ReadSavedDataSettings(0);
 
 	XPLMRegisterFlightLoopCallback(
 		MyFlightLoopCallback,	/* Callback */
@@ -185,6 +206,17 @@ PLUGIN_API void XPluginReceiveMessage(
 {
 }
 
+int GetDataRefState(XPLMDataRef DataRefID)
+{
+	int	DataRefi, IntVals[8];
+
+	memset(IntVals, 0, sizeof(IntVals));
+		XPLMGetDatavi(DataRefID, IntVals, 0, 8);
+		DataRefi = IntVals[0];
+
+	return DataRefi;
+}
+
 
 float	MyFlightLoopCallback(
 	float                inElapsedSinceLastCall,
@@ -194,30 +226,46 @@ float	MyFlightLoopCallback(
 {
 	/* The actual callback.  First we read the sim's time and the data. */
 	//float	elapsed = XPLMGetElapsedTime();
+
 	float	pBrake = XPLMGetDataf(ParkingBrake);
-	
-	if (FlightJobsXIsStarted == 1 && pBrake == 1.0)
+	int     iEngRunning = GetDataRefState(EngineRunning);
+	//XPLMGetDatavi(EngineRunning, pEngineRunning, 0, 8);// XPLMGetDataf(EngineRunning);
+
+	if (iStateStart == 1 && RememberShownStart == 0)
 	{
-
-		SetCurrentICAO();
-
-		if (RememberShown == 0 && strcmp(currentICAO, arrivalICAO) == 0)
+		if ((iStateStartParkingBrake == 1 && pBrake == 0.0) || (iStateStartEngineOn == 1 && iEngRunning > 0))
 		{
-			if (FlightJobsXMenuItem1 == 0)
-			{
-				CreateWidgetWindow(60, 650, 320, 370);
-				FlightJobsXMenuItem1 = 1;
-			}
-			else
-			{
-				XPShowWidget(FlightJobsXWidget);
-			}
-			RememberShown = 1;
+			OpenConnectorWindow();
+			RememberShownStart = 1;
+		}
+	}
+
+	if (FlightJobsXIsStarted == 1 && iStateFinish == 1 && RememberShownFinish == 0)
+	{
+		SetCurrentICAO();
+		if (((iStateStartParkingBrake == 1 && pBrake == 1.0) || (iStateStartEngineOn == 1 && iEngRunning == 0))
+			&& strcmp(currentICAO, arrivalICAO) == 0)
+		{
+			OpenConnectorWindow();
+			RememberShownFinish = 1;
 		}
 	}
 
 	/* Return 1.0 to indicate that we want to be called again in 5 second. */
 	return 1.0;
+}
+
+void OpenConnectorWindow()
+{
+	if (FlightJobsXMenuItemOpenFlag == 0)
+	{
+		CreateWidgetWindow(60, 650, 320, 370);
+		FlightJobsXMenuItemOpenFlag = 1;
+	}
+	else
+	{
+		XPShowWidget(FlightJobsXWidget);
+	}
 }
 
 void UpdateData()
@@ -284,11 +332,69 @@ int SetCurrentICAO()
 	return 0;
 }
 
+void CreateWidgetWindowSettings(int x, int y, int w, int h)
+{
+	int x2 = x + w;
+	int y2 = y - h;//280
+	char Buffer[255];
+
+	sprintf(Buffer, "%s", "FlightJobs Settings");
+	FlightJobsSettingsXWidget = XPCreateWidget(x, y, x2, y2,
+		1,	// Visible
+		Buffer,	// desc
+		1,		// root
+		NULL,	// no container
+		xpWidgetClass_MainWindow);
+
+	XPSetWidgetProperty(FlightJobsSettingsXWidget, xpProperty_MainWindowHasCloseBoxes, 1);
+
+	FlightJobsSettingsXWindow = XPCreateWidget(x + 5, y - 20, x2 - 5, y2 + 10,
+		1,	// Visible
+		"",	// desc
+		0,		// root
+		FlightJobsSettingsXWidget,
+		xpWidgetClass_SubWindow);
+
+	XPSetWidgetProperty(FlightJobsSettingsXWindow, xpProperty_SubWindowType, xpSubWindowStyle_SubWindow);
+
+	XPAddWidgetCallback(FlightJobsSettingsXWidget, FlightJobsSettingsXHandler);
+
+	// Popup when start checkbox
+	PopupWhenStartXCheckbox = XPCreateWidget(x + 20, y - 40, x + 30, y - 60, 1, " ", 0, FlightJobsSettingsXWidget, xpWidgetClass_Button);
+	XPCreateWidget(x + 35, y - 37, x + 200, y - 52, 1, "Popup connector window when start", 0, FlightJobsSettingsXWidget, xpWidgetClass_Caption);
+	XPSetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonBehavior, xpButtonBehaviorCheckBox);
+	XPSetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonState, 1);
+
+	PopupWhenFinishXCheckbox = XPCreateWidget(x + 20, y - 70, x + 30, y - 90, 1, " ", 0, FlightJobsSettingsXWidget, xpWidgetClass_Button);
+	XPCreateWidget(x + 35, y - 67, x + 200, y - 87, 1, "Popup connector window when finish", 0, FlightJobsSettingsXWidget, xpWidgetClass_Caption);
+	XPSetWidgetProperty(PopupWhenFinishXCheckbox, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(PopupWhenFinishXCheckbox, xpProperty_ButtonBehavior, xpButtonBehaviorCheckBox);
+	XPSetWidgetProperty(PopupWhenFinishXCheckbox, xpProperty_ButtonState, 1);
+	
+	PopupWhenStartParkingBrakeXRadio = XPCreateWidget(x + 50, y - 100, x + 60, y - 120, 1, " ", 0, FlightJobsSettingsXWidget, xpWidgetClass_Button);
+	XPCreateWidget(x + 65, y - 97, x + 100, y - 117, 1, "Parking brake", 0, FlightJobsSettingsXWidget, xpWidgetClass_Caption);
+	XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonBehavior, xpButtonBehaviorRadioButton);
+	XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, 1);
+
+	PopupWhenEngineOnXRadio = XPCreateWidget(x + 180, y - 100, x + 190, y - 120, 1, " ", 0, FlightJobsSettingsXWidget, xpWidgetClass_Button);
+	XPCreateWidget(x + 195, y - 97, x + 230, y - 117, 1, "Engine", 0, FlightJobsSettingsXWidget, xpWidgetClass_Caption);
+	XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonType, xpRadioButton);
+	XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonBehavior, xpButtonBehaviorRadioButton);
+
+	// Save Settings Button
+	SaveSettingsXButton = XPCreateWidget(x + 100, y - 210, x + 200, y - 230, 1, " Save ", 0, FlightJobsSettingsXWidget, xpWidgetClass_Button);
+	XPSetWidgetProperty(SaveSettingsXButton, xpProperty_ButtonType, xpPushButton);
+
+	ReadSavedDataSettings(1);
+}
+
+
+
 //CreateWidgetWindow(60, 650, 320, 370);
 void CreateWidgetWindow(int x, int y, int w, int h)
 {
-	int Item;
-
 	int x2 = x + w;
 	int y2 = y - h;//280
 	char Buffer[255];
@@ -384,6 +490,127 @@ void ReadSavedData() {
 	}
 }
 
+void ReadSavedDataSettings(int bindForms) {
+	XPLMGetSystemPath(outputPathSettings);
+	strcat(outputPathSettings, fileNameSettings);
+
+	gOutputFileSettings = fopen(outputPathSettings, "r");
+	if (gOutputFileSettings) {
+		char line[512];
+		char *search = "|";
+		
+		char *stateStart;
+		char *stateFinish;
+		char *stateStartParkingBrake;
+		char *stateStartEngineOn;
+		
+		while (!feof(gOutputFileSettings)) {
+			if (fgets(line, sizeof(line), gOutputFileSettings)) {
+				
+				stateStart = strtok(line, search);
+				stateFinish = strtok(NULL, search);
+				stateStartParkingBrake = strtok(NULL, search);
+				stateStartEngineOn = strtok(NULL, search);
+
+				if (bindForms)
+				{
+					XPSetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonState, atoi(stateStart));
+					XPSetWidgetProperty(PopupWhenFinishXCheckbox, xpProperty_ButtonState, atoi(stateFinish));
+					XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, atoi(stateStartParkingBrake));
+					XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonState, atoi(stateStartEngineOn));
+				}
+				
+				iStateStart = atoi(stateStart);
+				iStateFinish = atoi(stateFinish);
+				iStateStartParkingBrake = atoi(stateStartParkingBrake);
+				iStateStartEngineOn = atoi(stateStartEngineOn);
+				
+			}
+		}
+		fclose(gOutputFileSettings);
+	}
+}
+
+int	FlightJobsSettingsXHandler(
+	XPWidgetMessage			inMessage,
+	XPWidgetID				inWidget,
+	intptr_t				inParam1,
+	intptr_t				inParam2)
+{
+	// When widget close cross is clicked we only hide the widget
+	if (inMessage == xpMessage_CloseButtonPushed)
+	{
+		if (FlightJobsXMenuItemSettigsFlag == 1)
+		{
+			if (XPIsWidgetVisible(FlightJobsSettingsXWidget))
+			{
+				XPHideWidget(FlightJobsSettingsXWidget);
+			}
+		}
+		return 1;
+	}
+	if (inMessage == xpMsg_ButtonStateChanged)
+	{
+		if (inParam1 == (intptr_t)PopupWhenStartParkingBrakeXRadio)
+		{
+			int engState = XPGetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonState, 0);
+			XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonState, 0);
+			XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, engState);
+		}
+		
+		if (inParam1 == (intptr_t)PopupWhenEngineOnXRadio)
+		{
+			int BrakeState = XPGetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, 0);
+			XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonState, BrakeState);
+			XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, 0);
+		}
+
+		/*if (inParam1 == (intptr_t)PopupWhenStartXCheckbox)
+		{
+			int state = XPGetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonState, 0);
+			XPSetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_Enabled, state);
+			XPSetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_Enabled, state);
+		}*/
+		return 1;
+	}
+
+	if (inMessage == xpMsg_PushButtonPressed)
+	{
+		if (inParam1 == (intptr_t)SaveSettingsXButton)
+		{ 
+			int stateStart = XPGetWidgetProperty(PopupWhenStartXCheckbox, xpProperty_ButtonState, 0);
+			int stateFinish = XPGetWidgetProperty(PopupWhenFinishXCheckbox, xpProperty_ButtonState, 0);
+			
+			int stateStartParkingBrake = XPGetWidgetProperty(PopupWhenStartParkingBrakeXRadio, xpProperty_ButtonState, 0);
+			int stateStartEngineOn = XPGetWidgetProperty(PopupWhenEngineOnXRadio, xpProperty_ButtonState, 0);
+
+			// Save Settings 
+			/* Write the data to a file. */
+			XPLMGetSystemPath(outputPathSettings);
+			strcat(outputPathSettings, fileNameSettings);
+
+			gOutputFileSettings = fopen(outputPathSettings, "w");
+
+			/* Write a file. */
+			fprintf(gOutputFileSettings, "%d|%d|%d|%d", stateStart, stateFinish, stateStartParkingBrake, stateStartEngineOn);
+
+			fflush(gOutputFileSettings);
+
+			XPHideWidget(FlightJobsSettingsXWidget);
+
+			RememberShownStart = 0;
+			RememberShownFinish = 0;
+			iStateStart = stateStart;
+			iStateFinish = stateFinish;
+			iStateStartParkingBrake = stateStartParkingBrake;
+			iStateStartEngineOn = stateStartEngineOn;
+		}
+		return 1;
+	}
+
+	return 0;
+}
+
 int	FlightJobsXHandler(
 	XPWidgetMessage			inMessage,
 	XPWidgetID				inWidget,
@@ -393,7 +620,7 @@ int	FlightJobsXHandler(
 	// When widget close cross is clicked we only hide the widget
 	if (inMessage == xpMessage_CloseButtonPushed)
 	{
-		if (FlightJobsXMenuItem1 == 1)
+		if (FlightJobsXMenuItemOpenFlag == 1)
 		{
 			//XPDestroyWidget(FlightJobsXWidget, 1);
 			if (XPIsWidgetVisible(FlightJobsXWidget))
@@ -401,6 +628,7 @@ int	FlightJobsXHandler(
 				XPHideWidget(FlightJobsXWidget);
 			}			
 		}
+
 		return 1;
 	}
 
@@ -471,22 +699,29 @@ void FlightJobsXMenuHandler(void * mRef, void * iRef)
 	// Menu selected for widget
 	if (!strcmp((char *)iRef, "Open connector"))
 	{
-		if (FlightJobsXMenuItem1 == 0)
+		if (FlightJobsXMenuItemOpenFlag == 0)
 		{
 			CreateWidgetWindow(60, 650, 320, 370);
-			FlightJobsXMenuItem1 = 1;
+			FlightJobsXMenuItemOpenFlag = 1;
 		}
 		else
 		{
 			XPShowWidget(FlightJobsXWidget);
 		}
 	}
-}
 
-// Process Menu 2 selections
-void FlightJobsXMenuHandler2(void * mRef, void * iRef)
-{
-	
+	if (!strcmp((char *)iRef, "Settings"))
+	{
+		if (FlightJobsXMenuItemSettigsFlag == 0)
+		{
+			CreateWidgetWindowSettings(410, 650, 300, 250);
+			FlightJobsXMenuItemSettigsFlag = 1;
+		}
+		else
+		{
+			XPShowWidget(FlightJobsSettingsXWidget);
+		}
+	}
 }
 
 

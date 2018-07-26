@@ -1,14 +1,1 @@
-﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(387,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (Camera.vcxproj).  This can lead to incorrect clean and rebuild behavior.
-  DrawingHook.c
-  DrawingHookWin.cpp
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1198,5): warning MSB8012: TargetPath(C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\x64\Debug\DrawingHook.dll) does not match the Linker's OutputFile property value (C:\Users\rudolf\Documents\X-Plane SDK\SDKExamples\Projects\Win\Debug\Plugins\DrawingHook.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1199,5): warning MSB8012: TargetExt(.dll) does not match the Linker's OutputFile property value (.xpl). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
-     Criando biblioteca .\Debug\DrawingHook.lib e objeto .\Debug\DrawingHook.exp
-DrawingHook.obj : error LNK2019: símbolo externo indefinido __imp_XPLMRegisterDrawCallback referenciado na função XPluginStart
-DrawingHook.obj : error LNK2019: símbolo externo indefinido __imp_XPLMUnregisterDrawCallback referenciado na função XPluginStop
-DrawingHook.obj : error LNK2019: símbolo externo indefinido __imp_XPLMFindDataRef referenciado na função XPluginStart
-DrawingHook.obj : error LNK2019: símbolo externo indefinido __imp_XPLMGetDataf referenciado na função MyDrawCallback
-DrawingHook.obj : error LNK2019: símbolo externo indefinido __imp_XPLMSetGraphicsState referenciado na função MyDrawCallback
-..\..\..\SDK\Libraries\Win\XPLM.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
-..\..\..\SDK\Libraries\Win\XPWidgets.lib : warning LNK4272: o tipo de máquina da biblioteca 'x86' está em conflito com o tipo de máquina de destino 'x64'
-Debug/Plugins/DrawingHook.xpl : fatal error LNK1120: 5 externo não resolvidos
+﻿D:\Visual Studio2017\Community\Common7\IDE\VC\VCTargets\Platforms\x64\PlatformToolsets\v141\Toolset.targets(36,5): error MSB8036: The Windows SDK version 8.1 was not found. Install the required version of Windows SDK or change the SDK version in the project property pages or by right-clicking the solution and selecting "Retarget solution".
